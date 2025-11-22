@@ -119,11 +119,43 @@ const getLinks = async (req, res, next) => {
 
     // Add search filter if provided
     if (search) {
-      where.OR = [
+      const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+      
+      // Extract shortCode from search term if it looks like a short URL
+      let extractedShortCode = null;
+      
+      // Check if search term contains the baseUrl pattern
+      if (search.includes(baseUrl)) {
+        // Extract the shortCode part after the baseUrl
+        const urlPattern = new RegExp(`${baseUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/([A-Za-z0-9]+)`, 'i');
+        const match = search.match(urlPattern);
+        if (match && match[1]) {
+          extractedShortCode = match[1];
+        }
+      } else {
+        // Also check for patterns like "localhost:3000/abc123" or just "/abc123"
+        const urlPattern = /\/?([A-Za-z0-9]{6,8})(?:\/|$)/i;
+        const match = search.match(urlPattern);
+        if (match && match[1]) {
+          extractedShortCode = match[1];
+        }
+      }
+      
+      // Build search conditions
+      const searchConditions = [
         { originalUrl: { contains: search, mode: 'insensitive' } },
-        { shortCode: { contains: search, mode: 'insensitive' } },
         { title: { contains: search, mode: 'insensitive' } }
       ];
+      
+      // If we extracted a shortCode from a URL pattern, search for that specific shortCode
+      // Otherwise, search for the full search term in shortCode
+      if (extractedShortCode) {
+        searchConditions.push({ shortCode: { contains: extractedShortCode, mode: 'insensitive' } });
+      } else {
+        searchConditions.push({ shortCode: { contains: search, mode: 'insensitive' } });
+      }
+      
+      where.OR = searchConditions;
     }
 
     const [links, total] = await Promise.all([
