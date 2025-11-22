@@ -1,93 +1,59 @@
-# TinyLink - URL Shortener Backend API
+# TinyLink Backend
 
-A URL shortener service similar to bit.ly, built with Node.js + Express and PostgreSQL. This backend API provides endpoints for creating short links, redirecting, managing links, and tracking analytics.
+Backend API for TinyLink URL shortener service built with Node.js and Express.
 
-## 📋 Assignment Requirements Checklist
+## 🚀 Deployment
 
-### ✅ Core Features
+**Live URL:** https://tinylink-backend-tw9p.onrender.com
 
-- [x] **Create Short Links**
-  - Takes long URL and optionally custom short code
-  - Validates URL before saving
-  - Custom codes are globally unique (returns 409 if exists)
-  - Short codes follow pattern `[A-Za-z0-9]{6,8}`
+## 📋 What's Implemented
 
-- [x] **Redirect Functionality**
-  - Visiting `/{code}` performs HTTP 302 redirect to original URL
-  - Each redirect increments click count
-  - Updates "last clicked" time via analytics
+### Core Features
+- ✅ **Create Short Links** - Generate short URLs with optional custom codes (6-8 alphanumeric characters)
+- ✅ **URL Validation** - Validates URLs before saving
+- ✅ **Custom Code Support** - Users can provide custom short codes (globally unique)
+- ✅ **Redirect Functionality** - HTTP 302 redirects to original URLs with click tracking
+- ✅ **Click Analytics** - Tracks total clicks, last clicked time, and detailed analytics
+- ✅ **Delete Links** - Remove links (returns 404 after deletion)
+- ✅ **Link Statistics** - Get detailed stats for individual links
+- ✅ **Health Check** - `/healthz` endpoint for system monitoring
 
-- [x] **Delete Links**
-  - Users can delete existing links
-  - After deletion, `/{code}` returns 404 and no longer redirects
+### API Endpoints
 
-- [x] **Analytics Tracking**
-  - Tracks clicks with IP address, user agent, device info
-  - Stores browser, OS, device type information
-  - Click count incremented on each redirect
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/links` | Create a new short link (returns 409 if code exists) |
+| GET | `/api/links` | List all links with pagination and search |
+| GET | `/api/links/:code` | Get stats for a single link by code |
+| DELETE | `/api/links/:code` | Delete a link |
+| GET | `/:shortCode` | Redirect to original URL (302) |
+| GET | `/healthz` | Health check endpoint |
 
-### ✅ API Endpoints (All Public - No Authentication)
+### Additional Features
+- **Analytics Tracking** - Captures IP address, user agent, referer, device type, browser, OS
+- **Pagination** - Supports pagination for listing links
+- **Search/Filter** - Search links by code, URL, or title
+- **Database Connection Retry** - Automatic retry logic for database connections
+- **Error Handling** - Comprehensive error handling with proper HTTP status codes
+- **Input Validation** - Request validation using express-validator
 
-| Method | Path | Description | Status Code |
-|--------|------|-------------|-------------|
-| GET | `/healthz` | Health check | 200 |
-| POST | `/api/links` | Create link | 201 (409 if code exists) |
-| GET | `/api/links` | List all links | 200 |
-| GET | `/api/links/:code` | Stats for one code | 200 |
-| DELETE | `/api/links/:code` | Delete link | 200 |
-| GET | `/:code` | Redirect to original URL | 302 or 404 |
+## 🛠️ Technologies Used
 
-### ✅ URL Conventions (For Automated Testing)
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **Prisma** - ORM for database management
+- **PostgreSQL** - Database (via Neon)
+- **express-validator** - Request validation
+- **nanoid** - Short code generation
+- **cors** - Cross-origin resource sharing
+- **dotenv** - Environment variable management
 
-- [x] `/healthz` returns status 200 with `{ ok: true, version: "1.0" }`
-- [x] `POST /api/links` creates link, returns 409 if code exists
-- [x] `GET /api/links` lists all links (public)
-- [x] `GET /api/links/:code` returns stats (public)
-- [x] `DELETE /api/links/:code` deletes link (public)
-- [x] `/:code` redirects (302) or returns 404
-- [x] Short codes follow `[A-Za-z0-9]{6,8}` pattern
-
-### ✅ Technical Requirements
-
-- [x] **No User Authentication** - All endpoints are public
-- [x] **URL Validation** - Only accepts http:// and https:// URLs
-- [x] **Short Code Generation** - Auto-generates 6-8 character alphanumeric codes
-- [x] **Custom Code Support** - Accepts custom codes with validation
-- [x] **Duplicate Handling** - Returns 409 Conflict for duplicate codes
-- [x] **Error Handling** - Proper HTTP status codes and error messages
-- [x] **Database** - PostgreSQL with Prisma ORM
-- [x] **Environment Variables** - `.env.example` file provided
-
-### ✅ Database Schema
-
-- [x] **Link Model**
-  - `id` (String, Primary Key)
-  - `shortCode` (String, Unique, Indexed)
-  - `originalUrl` (String)
-  - `title` (String, Optional)
-  - `description` (String, Optional)
-  - `clicks` (Int, Default: 0)
-  - `isActive` (Boolean, Default: true)
-  - `expiresAt` (DateTime, Optional)
-  - `createdAt`, `updatedAt` (DateTime)
-
-- [x] **Analytics Model**
-  - `id` (String, Primary Key)
-  - `linkId` (String, Foreign Key)
-  - `ipAddress` (String, Optional)
-  - `userAgent` (String, Optional)
-  - `referer` (String, Optional)
-  - `deviceType`, `browser`, `os` (String, Optional)
-  - `clickedAt` (DateTime)
-
-- [x] **No User Model** - Removed as per assignment (no authentication)
-
-## 🚀 Getting Started
+## 📦 Getting Started
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
-- PostgreSQL database
+- Node.js (v18 or higher)
+- PostgreSQL database (or Neon account)
 - npm or yarn
 
 ### Installation
@@ -104,199 +70,118 @@ A URL shortener service similar to bit.ly, built with Node.js + Express and Post
    ```
 
 3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
    
-   Edit `.env` and add:
+   Create a `.env` file in the root directory:
    ```env
-   DATABASE_URL="postgresql://user:password@localhost:5432/tinylink"
-   BASE_URL="http://localhost:3000"
+   DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"
+   BASE_URL="http://localhost:3001"
    PORT=3000
    NODE_ENV=development
    ```
 
-4. **Set up database**
-   ```bash
-   # Generate Prisma client
-   npm run prisma:generate
+4. **Set up the database**
    
-   # Run migrations
+   Generate Prisma client:
+   ```bash
+   npm run prisma:generate
+   ```
+   
+   Run migrations:
+   ```bash
    npm run prisma:migrate
    ```
 
-5. **Start the server**
+5. **Start the development server**
    ```bash
-   # Development mode (with nodemon)
    npm run dev
-   
-   # Production mode
-   npm start
    ```
 
-The server will start on `http://localhost:3000`
+   The server will start on `http://localhost:3000`
 
-## 📚 API Documentation
+### Available Scripts
 
-### Health Check
+- `npm run dev` - Start development server with nodemon
+- `npm start` - Start production server
+- `npm run prisma:generate` - Generate Prisma client
+- `npm run prisma:migrate` - Run database migrations
+- `npm run prisma:studio` - Open Prisma Studio (database GUI)
 
-**GET** `/healthz`
-
-Returns system health status.
-
-**Response:**
-```json
-{
-  "ok": true,
-  "version": "1.0"
-}
-```
-
----
+## 📝 API Documentation
 
 ### Create Link
 
 **POST** `/api/links`
 
-Creates a new short link. Returns 409 if custom code already exists.
-
-**Request Body:**
+Request body:
 ```json
 {
-  "originalUrl": "https://www.example.com",
-  "shortCode": "docs",  // Optional: 6-8 alphanumeric characters
-  "title": "Example Website",  // Optional
-  "description": "This is an example link",  // Optional
-  "expiresAt": "2024-12-31T23:59:59.000Z"  // Optional
+  "originalUrl": "https://example.com",
+  "shortCode": "example" // optional, 6-8 alphanumeric characters
 }
 ```
 
-**Success Response (201):**
+Response (201):
 ```json
 {
   "success": true,
   "message": "Short link created successfully",
   "data": {
     "link": {
-      "id": "clx...",
-      "shortCode": "docs",
-      "originalUrl": "https://www.example.com",
-      "shortUrl": "http://localhost:3000/docs",
+      "id": "...",
+      "shortCode": "example",
+      "originalUrl": "https://example.com",
+      "shortUrl": "http://localhost:3001/example",
       "clicks": 0,
-      "isActive": true,
-      "createdAt": "2024-01-01T00:00:00.000Z"
+      "createdAt": "..."
     }
   }
 }
 ```
 
-**Error Response (409) - Duplicate Code:**
-```json
-{
-  "success": false,
-  "message": "Short code already exists. Please choose a different one."
-}
-```
+### Get All Links
 
-**Error Response (400) - Invalid URL:**
-```json
-{
-  "success": false,
-  "message": "Invalid URL. Must be a valid http:// or https:// URL"
-}
-```
+**GET** `/api/links?page=1&limit=10&search=query`
 
----
-
-### List All Links
-
-**GET** `/api/links?page=1&limit=10&search=`
-
-Lists all links with pagination and optional search.
-
-**Query Parameters:**
-- `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 10, max: 100)
-- `search` (optional): Search term for code, URL, or title
-
-**Response (200):**
+Response:
 ```json
 {
   "success": true,
   "data": {
-    "links": [
-      {
-        "id": "clx...",
-        "shortCode": "docs",
-        "originalUrl": "https://www.example.com",
-        "shortUrl": "http://localhost:3000/docs",
-        "clicks": 5,
-        "isActive": true,
-        "createdAt": "2024-01-01T00:00:00.000Z"
-      }
-    ],
+    "links": [...],
     "pagination": {
       "page": 1,
       "limit": 10,
-      "total": 1,
-      "pages": 1
+      "total": 100,
+      "pages": 10
     }
   }
 }
 ```
-
----
 
 ### Get Link Stats
 
 **GET** `/api/links/:code`
 
-Returns statistics for a specific link by code.
-
-**Response (200):**
+Response:
 ```json
 {
   "success": true,
   "data": {
     "link": {
-      "id": "clx...",
-      "shortCode": "docs",
-      "originalUrl": "https://www.example.com",
-      "shortUrl": "http://localhost:3000/docs",
-      "clicks": 5,
-      "analytics": [
-        {
-          "id": "cly...",
-          "ipAddress": "192.168.1.1",
-          "userAgent": "Mozilla/5.0...",
-          "deviceType": "desktop",
-          "browser": "chrome",
-          "os": "windows",
-          "clickedAt": "2024-01-01T12:00:00.000Z"
-        }
-      ]
+      "shortCode": "example",
+      "originalUrl": "https://example.com",
+      "clicks": 42,
+      "analytics": [...]
     }
   }
 }
 ```
 
-**Error Response (404):**
-```json
-{
-  "success": false,
-  "message": "Link not found"
-}
-```
-
----
-
 ### Delete Link
 
 **DELETE** `/api/links/:code`
 
-Deletes a link. After deletion, `/{code}` will return 404.
-
-**Response (200):**
+Response:
 ```json
 {
   "success": true,
@@ -304,193 +189,60 @@ Deletes a link. After deletion, `/{code}` will return 404.
 }
 ```
 
-**Error Response (404):**
+### Redirect
+
+**GET** `/:shortCode`
+
+Returns HTTP 302 redirect to original URL and increments click count.
+
+### Health Check
+
+**GET** `/healthz`
+
+Response:
 ```json
 {
-  "success": false,
-  "message": "Link not found"
+  "ok": true,
+  "version": "1.0"
 }
 ```
 
----
+## 🔒 Environment Variables
 
-### Redirect
+Create a `.env` file with the following variables:
 
-**GET** `/:code`
-
-Redirects to the original URL. Returns 404 if link not found or deleted.
-
-**Response:**
-- **302 Redirect** - If link exists and is active
-- **404 Not Found** - If link doesn't exist, is inactive, or expired
-
-**Note:** Click count is incremented and analytics are tracked on each redirect.
-
----
-
-## 🔍 Implementation Verification
-
-### ✅ All Requirements Met
-
-1. **No Authentication Required**
-   - ✅ All endpoints are public
-   - ✅ No user model in database
-   - ✅ No authentication middleware
-   - ✅ No JWT or bcrypt dependencies
-
-2. **URL Conventions Match Specification**
-   - ✅ `/healthz` returns `{ ok: true, version: "1.0" }`
-   - ✅ Routes use `:code` parameter (not `:id`)
-   - ✅ All endpoints match document exactly
-
-3. **Short Code Rules**
-   - ✅ Pattern: `[A-Za-z0-9]{6,8}`
-   - ✅ Auto-generated codes are 6-8 characters
-   - ✅ Custom codes validated against pattern
-   - ✅ Globally unique (checked before creation)
-
-4. **Error Handling**
-   - ✅ 409 for duplicate codes
-   - ✅ 404 for not found
-   - ✅ 400 for invalid input
-   - ✅ 302 for redirects
-
-5. **Analytics**
-   - ✅ Tracks each click
-   - ✅ Increments click count
-   - ✅ Stores device, browser, OS info
-   - ✅ Async tracking (doesn't block redirect)
-
-6. **Database**
-   - ✅ PostgreSQL with Prisma
-   - ✅ Proper indexes on shortCode
-   - ✅ Cascade deletes for analytics
-   - ✅ No user-related fields
+- `DATABASE_URL` - PostgreSQL connection string (required)
+- `BASE_URL` - Base URL for generating short links (default: http://localhost:3001)
+- `PORT` - Server port (default: 3000)
+- `NODE_ENV` - Environment (development/production)
 
 ## 📁 Project Structure
 
 ```
 TinyLink-Backend/
 ├── src/
-│   ├── controllers/
-│   │   ├── analyticsController.js    # Analytics business logic
-│   │   ├── linkController.js         # Link CRUD operations
-│   │   └── redirectController.js     # Redirect handling
-│   ├── middleware/
-│   │   ├── analytics.js              # Click tracking
-│   │   └── validation.js             # Request validation
-│   ├── routes/
-│   │   ├── analytics.js              # Analytics routes
-│   │   ├── links.js                  # Link routes
-│   │   └── redirect.js               # Redirect route
-│   ├── utils/
-│   │   ├── generateShortCode.js      # Code generation
-│   │   └── validateUrl.js            # URL validation
-│   └── server.js                     # Express app setup
+│   ├── controllers/     # Request handlers
+│   ├── routes/          # API routes
+│   ├── middleware/      # Custom middleware
+│   ├── db/              # Database configuration
+│   ├── utils/           # Utility functions
+│   └── server.js        # Express app entry point
 ├── prisma/
-│   ├── schema.prisma                 # Database schema
-│   └── migrations/                   # Database migrations
+│   └── schema.prisma    # Database schema
 ├── package.json
-├── .env.example                      # Environment variables template
-└── README.md                         # This file
+└── README.md
 ```
 
 ## 🧪 Testing
 
-### Manual Testing
-
-1. **Health Check**
-   ```bash
-   curl http://localhost:3000/healthz
-   ```
-
-2. **Create Link**
-   ```bash
-   curl -X POST http://localhost:3000/api/links \
-     -H "Content-Type: application/json" \
-     -d '{"originalUrl": "https://example.com"}'
-   ```
-
-3. **List Links**
-   ```bash
-   curl http://localhost:3000/api/links
-   ```
-
-4. **Get Stats**
-   ```bash
-   curl http://localhost:3000/api/links/{code}
-   ```
-
-5. **Delete Link**
-   ```bash
-   curl -X DELETE http://localhost:3000/api/links/{code}
-   ```
-
-6. **Redirect**
-   ```bash
-   curl -L http://localhost:3000/{code}
-   ```
-
-### Automated Testing Checklist
-
-The following will be verified by automated tests:
-
-- [x] `/healthz` returns 200
-- [x] Creating a link works
-- [x] Duplicate codes return 409
-- [x] Redirect works and increments click count
-- [x] Deletion stops redirect (404)
-- [x] All endpoints match URL conventions
-
-## 🔧 Environment Variables
-
-Create a `.env` file with:
-
-```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/tinylink"
-
-# Application
-BASE_URL="http://localhost:3000"
-PORT=3000
-NODE_ENV=development
-```
-
-## 📝 Notes
-
-- **No Authentication**: All endpoints are public as per assignment requirements
-- **Short Codes**: Auto-generated codes are random 6-8 characters. Custom codes must be 6-8 alphanumeric.
-- **Analytics**: Tracked asynchronously to not block redirects
-- **Database**: Uses Prisma ORM for type-safe database access
-- **Error Handling**: Comprehensive error handling with proper HTTP status codes
-
-## 🚢 Deployment
-
-### Recommended Platforms
-
-- **Backend**: Render, Railway, or Vercel (Node.js)
-- **Database**: Neon (Free PostgreSQL)
-
-### Deployment Steps
-
-1. Push code to GitHub
-2. Connect to deployment platform
-3. Set environment variables
-4. Run database migrations
-5. Deploy
+The API follows the specification for automated testing:
+- Short codes follow pattern: `[A-Za-z0-9]{6,8}`
+- Duplicate codes return 409 status
+- Deleted links return 404
+- Redirects increment click count
+- Health endpoint returns 200
 
 ## 📄 License
 
 ISC
-
-## 👤 Author
-
-Built as a take-home assignment for TinyLink URL Shortener.
-
----
-
-**Status**: ✅ All assignment requirements implemented and verified
-**Authentication**: ❌ Not required (all endpoints public)
-**Database**: ✅ PostgreSQL with Prisma
-**API Compliance**: ✅ Matches specification exactly for automated testing
 
