@@ -26,5 +26,6 @@ dist/
 build/
 
 # Prisma
-prisma/migrations/
+# Note: migrations/ should be committed to version control
+# Only ignore generated client (already in node_modules)
 
