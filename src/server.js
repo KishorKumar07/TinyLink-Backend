@@ -27,8 +27,10 @@ app.use('/api/links', linkRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
 // Redirect route (must be after API routes)
+// Only match valid short codes: 6-8 alphanumeric characters
+// This prevents catching routes like /error, /api, etc.
 const redirectHandler = require('./routes/redirect');
-app.get('/:shortCode', redirectHandler);
+app.get('/:shortCode([A-Za-z0-9]{6,8})', redirectHandler);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
