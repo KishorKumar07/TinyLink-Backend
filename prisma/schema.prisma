@@ -10,24 +10,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  links     Link[]
-}
-
 model Link {
   id          String      @id @default(cuid())
   shortCode   String      @unique
   originalUrl String
   title       String?
   description String?
-  userId      String?
-  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
   clicks      Int         @default(0)
   isActive    Boolean     @default(true)
   expiresAt   DateTime?
@@ -36,7 +24,6 @@ model Link {
   analytics   Analytics[]
   
   @@index([shortCode])
-  @@index([userId])
 }
 
 model Analytics {
@@ -55,5 +42,6 @@ model Analytics {
   
   @@index([linkId])
   @@index([clickedAt])
+  @@index([linkId, clickedAt]) // Composite index for faster analytics queries
 }
 

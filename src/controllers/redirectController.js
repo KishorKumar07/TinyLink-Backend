@@ -1,7 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const { prisma, withRetry } = require('../db/prisma');
 const trackClick = require('../middleware/analytics').trackClick;
-
-const prisma = new PrismaClient();
 
 /**
  * Redirect to original URL
@@ -10,10 +8,18 @@ const redirect = async (req, res, next) => {
   try {
     const { shortCode } = req.params;
 
-    // Find link by short code
-    const link = await prisma.link.findUnique({
-      where: { shortCode }
-    });
+    // Find link by short code - optimize for redirect speed
+    const link = await withRetry(() =>
+      prisma.link.findUnique({
+        where: { shortCode },
+        select: {
+          id: true,
+          originalUrl: true,
+          isActive: true,
+          expiresAt: true
+        }
+      })
+    );
 
     // Check if link exists
     if (!link) {

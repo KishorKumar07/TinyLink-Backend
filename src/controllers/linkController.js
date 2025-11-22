@@ -1,8 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+const { prisma, withRetry } = require('../db/prisma');
 const generateShortCode = require('../utils/generateShortCode');
 const validateUrl = require('../utils/validateUrl');
-
-const prisma = new PrismaClient();
 
 /**
  * Create a new short link
@@ -23,9 +21,11 @@ const createLink = async (req, res, next) => {
     let shortCode;
     if (customShortCode) {
       // Check if custom short code is available
-      const existing = await prisma.link.findUnique({
-        where: { shortCode: customShortCode }
-      });
+      const existing = await withRetry(() => 
+        prisma.link.findUnique({
+          where: { shortCode: customShortCode }
+        })
+      );
 
       if (existing) {
         return res.status(409).json({
@@ -44,9 +44,11 @@ const createLink = async (req, res, next) => {
         // Generate random length between 6-8 as per spec [A-Za-z0-9]{6,8}
         const randomLength = Math.floor(Math.random() * 3) + 6; // 6, 7, or 8
         shortCode = await generateShortCode(randomLength);
-        const existing = await prisma.link.findUnique({
-          where: { shortCode }
-        });
+        const existing = await withRetry(() =>
+          prisma.link.findUnique({
+            where: { shortCode }
+          })
+        );
         if (!existing) {
           isUnique = true;
         }
@@ -74,16 +76,17 @@ const createLink = async (req, res, next) => {
     }
 
     // Create link (public, no user required)
-    const link = await prisma.link.create({
-      data: {
-        shortCode,
-        originalUrl,
-        title: title || null,
-        description: description || null,
-        userId: null,
-        expiresAt: expiresAtDate
-      }
-    });
+    const link = await withRetry(() =>
+      prisma.link.create({
+        data: {
+          shortCode,
+          originalUrl,
+          title: title || null,
+          description: description || null,
+          expiresAt: expiresAtDate
+        }
+      })
+    );
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const shortUrl = `${baseUrl}/${shortCode}`;
@@ -124,25 +127,27 @@ const getLinks = async (req, res, next) => {
     }
 
     const [links, total] = await Promise.all([
-      prisma.link.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          shortCode: true,
-          originalUrl: true,
-          title: true,
-          description: true,
-          clicks: true,
-          isActive: true,
-          expiresAt: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      }),
-      prisma.link.count({ where })
+      withRetry(() =>
+        prisma.link.findMany({
+          where,
+          skip,
+          take,
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            shortCode: true,
+            originalUrl: true,
+            title: true,
+            description: true,
+            clicks: true,
+            isActive: true,
+            expiresAt: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        })
+      ),
+      withRetry(() => prisma.link.count({ where }))
     ]);
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
@@ -175,27 +180,29 @@ const getLinkByCode = async (req, res, next) => {
   try {
     const { code } = req.params;
 
-    const link = await prisma.link.findUnique({
-      where: {
-        shortCode: code
-      },
-      include: {
-        analytics: {
-          take: 10,
-          orderBy: { clickedAt: 'desc' },
-          select: {
-            id: true,
-            ipAddress: true,
-            userAgent: true,
-            referer: true,
-            deviceType: true,
-            browser: true,
-            os: true,
-            clickedAt: true
+    const link = await withRetry(() =>
+      prisma.link.findUnique({
+        where: {
+          shortCode: code
+        },
+        include: {
+          analytics: {
+            take: 10,
+            orderBy: { clickedAt: 'desc' },
+            select: {
+              id: true,
+              ipAddress: true,
+              userAgent: true,
+              referer: true,
+              deviceType: true,
+              browser: true,
+              os: true,
+              clickedAt: true
+            }
           }
         }
-      }
-    });
+      })
+    );
 
     if (!link) {
       return res.status(404).json({
@@ -228,12 +235,14 @@ const deleteLink = async (req, res, next) => {
   try {
     const { code } = req.params;
 
-    // Check if link exists
-    const link = await prisma.link.findUnique({
-      where: {
-        shortCode: code
-      }
-    });
+    // Check if link exists and delete in one operation for better performance
+    const link = await withRetry(() =>
+      prisma.link.findUnique({
+        where: {
+          shortCode: code
+        }
+      })
+    );
 
     if (!link) {
       return res.status(404).json({
@@ -242,9 +251,11 @@ const deleteLink = async (req, res, next) => {
       });
     }
 
-    await prisma.link.delete({
-      where: { shortCode: code }
-    });
+    await withRetry(() =>
+      prisma.link.delete({
+        where: { shortCode: code }
+      })
+    );
 
     res.json({
       success: true,

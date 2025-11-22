@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const { prisma, withRetry } = require('../db/prisma');
 
 /**
  * Get analytics for a specific link
@@ -10,13 +8,14 @@ const getAnalytics = async (req, res, next) => {
     const { linkId } = req.params;
     const { startDate, endDate, page = 1, limit = 50 } = req.query;
 
-    // Verify link belongs to user
-    const link = await prisma.link.findFirst({
-      where: {
-        id: linkId,
-        userId: req.user.id
-      }
-    });
+    // Find link by ID
+    const link = await withRetry(() =>
+      prisma.link.findUnique({
+        where: {
+          id: linkId
+        }
+      })
+    );
 
     if (!link) {
       return res.status(404).json({
@@ -36,34 +35,38 @@ const getAnalytics = async (req, res, next) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    // Get analytics data
-    const [analytics, total] = await Promise.all([
-      prisma.analytics.findMany({
-        where: {
-          linkId,
-          ...dateFilter
-        },
-        skip,
-        take,
-        orderBy: { clickedAt: 'desc' }
-      }),
-      prisma.analytics.count({
-        where: {
-          linkId,
-          ...dateFilter
-        }
-      })
+    // Get analytics data - optimize with parallel queries
+    const [analytics, total, stats] = await Promise.all([
+      withRetry(() =>
+        prisma.analytics.findMany({
+          where: {
+            linkId,
+            ...dateFilter
+          },
+          skip,
+          take,
+          orderBy: { clickedAt: 'desc' }
+        })
+      ),
+      withRetry(() =>
+        prisma.analytics.count({
+          where: {
+            linkId,
+            ...dateFilter
+          }
+        })
+      ),
+      withRetry(() =>
+        prisma.analytics.groupBy({
+          by: ['deviceType', 'browser', 'os'],
+          where: {
+            linkId,
+            ...dateFilter
+          },
+          _count: true
+        })
+      )
     ]);
-
-    // Get aggregated statistics
-    const stats = await prisma.analytics.groupBy({
-      by: ['deviceType', 'browser', 'os'],
-      where: {
-        linkId,
-        ...dateFilter
-      },
-      _count: true
-    });
 
     // Calculate device type distribution
     const deviceStats = stats.reduce((acc, stat) => {
@@ -122,13 +125,14 @@ const getAnalyticsSummary = async (req, res, next) => {
   try {
     const { linkId } = req.params;
 
-    // Verify link belongs to user
-    const link = await prisma.link.findFirst({
-      where: {
-        id: linkId,
-        userId: req.user.id
-      }
-    });
+    // Find link by ID
+    const link = await withRetry(() =>
+      prisma.link.findUnique({
+        where: {
+          id: linkId
+        }
+      })
+    );
 
     if (!link) {
       return res.status(404).json({
@@ -141,16 +145,18 @@ const getAnalyticsSummary = async (req, res, next) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const clicksByDate = await prisma.analytics.groupBy({
-      by: ['clickedAt'],
-      where: {
-        linkId,
-        clickedAt: {
-          gte: thirtyDaysAgo
-        }
-      },
-      _count: true
-    });
+    const clicksByDate = await withRetry(() =>
+      prisma.analytics.groupBy({
+        by: ['clickedAt'],
+        where: {
+          linkId,
+          clickedAt: {
+            gte: thirtyDaysAgo
+          }
+        },
+        _count: true
+      })
+    );
 
     // Format for chart (group by day)
     const dailyClicks = {};

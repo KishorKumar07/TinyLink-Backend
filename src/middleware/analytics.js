@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const { prisma, withRetry } = require('../db/prisma');
 
 /**
  * Middleware to track link analytics
@@ -35,21 +33,24 @@ async function trackClick(linkId, req) {
     // Parse user agent (simplified - in production, use a library like ua-parser-js)
     const deviceInfo = parseUserAgent(userAgent);
 
-    await prisma.analytics.create({
-      data: {
-        linkId,
-        ipAddress,
-        userAgent,
-        referer,
-        ...deviceInfo
-      }
-    });
-
-    // Increment click count
-    await prisma.link.update({
-      where: { id: linkId },
-      data: { clicks: { increment: 1 } }
-    });
+    // Use transaction for atomicity and better performance
+    await withRetry(() =>
+      prisma.$transaction([
+        prisma.analytics.create({
+          data: {
+            linkId,
+            ipAddress,
+            userAgent,
+            referer,
+            ...deviceInfo
+          }
+        }),
+        prisma.link.update({
+          where: { id: linkId },
+          data: { clicks: { increment: 1 } }
+        })
+      ])
+    );
   } catch (error) {
     console.error('Error tracking analytics:', error);
   }
@@ -102,6 +103,8 @@ function parseUserAgent(userAgent) {
   return { deviceType, browser, os };
 }
 
-module.exports = trackAnalytics;
-module.exports.trackClick = trackClick;
+module.exports = {
+  trackAnalytics,
+  trackClick
+};
 

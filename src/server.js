@@ -1,14 +1,12 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { PrismaClient } = require('@prisma/client');
+const { prisma, connectDatabase } = require('./db/prisma');
 
-const authRoutes = require('./routes/auth');
 const linkRoutes = require('./routes/links');
 const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
-const prisma = new PrismaClient();
 
 // Middleware
 app.use(cors());
@@ -25,7 +23,6 @@ app.get('/healthz', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
 app.use('/api/links', linkRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
@@ -53,9 +50,24 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+// Start server and test database connection
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Test database connection
+  await connectDatabase();
+  
+  // Periodic connection health check (every 30 seconds)
+  setInterval(async () => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (error) {
+      console.error('⚠️ Database health check failed:', error.message);
+      // Attempt reconnection
+      await connectDatabase();
+    }
+  }, 30000);
 });
 
 // Graceful shutdown

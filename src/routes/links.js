@@ -1,6 +1,5 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const authenticate = require('../middleware/auth');
 const handleValidationErrors = require('../middleware/validation');
 const linkController = require('../controllers/linkController');
 
