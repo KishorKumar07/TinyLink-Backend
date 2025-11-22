@@ -22,9 +22,9 @@ const redirect = async (req, res, next) => {
     );
 
     // Get frontend URL for error page redirects
-    // Use FRONTEND_URL if set, otherwise default to localhost:3001
+    // Use BASE_URL if set, otherwise default to localhost:3001
     // BASE_URL is for generating short links (backend URL), not frontend
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+    const frontendUrl = process.env.BASE_URL || 'http://localhost:3001';
     
     // Debug logging in development
     if (process.env.NODE_ENV === 'development') {
